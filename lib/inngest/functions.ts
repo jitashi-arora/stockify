@@ -17,28 +17,40 @@ export const sendSignUpEmail = inngest.createFunction(
         const response = await step.run('generate-welcome-intro', async () => {
             const apiKey = process.env.GEMINI_API_KEY;
 
-            // Using the exact model name found in your successful diagnostic log
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }]
-                })
-            });
+            try {
+                // We try the most stable version of Gemini 1.5 Flash
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    }),
+                    // Set a short timeout so the whole app doesn't hang
+                    signal: AbortSignal.timeout(5000)
+                });
 
-            const data = await res.json();
+                if (res.ok) {
+                    return await res.json();
+                }
 
-            if (!res.ok) {
-                throw new Error(`Gemini API Error: ${data.error?.message || JSON.stringify(data)}`);
+                // If it's a quota or 404 error, we log it but don't crash
+                console.warn("AI Step failed, using fallback intro. Status:", res.status);
+                return null;
+            } catch (error) {
+                console.error("AI Step error:", error);
+                return null;
             }
-
-            return data;
         });
 
-// The extraction logic remains the same
-        const part = response.candidates?.[0]?.content?.parts?.[0];
-        const introText = (part && 'text' in part ? part.text : null) || 'Welcome to Stockify! We are excited to help you track your financial journey.';
+// Logic to extract AI text OR use a professional fallback
+        const part = response?.candidates?.[0]?.content?.parts?.[0];
+        const aiIntro = part && 'text' in part ? part.text : null;
 
+        const introText = aiIntro || `
+    Thanks for joining Stockify! We've analyzed your goal for <strong>${event.data.investmentGoals}</strong> 
+    and your <strong>${event.data.riskTolerance}</strong> risk profile. You're now set up to track 
+    real-time data in the <strong>${event.data.preferredIndustry}</strong> sector.
+`;
         await step.run('send-welcome-email', async () => {
             const part = response.candidates?.[0]?.content?.parts?.[0];
             const introText = (part && 'text' in part ? part.text : null) ||'Thanks for joining Stockify. You now have the tools to track markets and make smarter moves.'
