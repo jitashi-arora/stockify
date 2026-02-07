@@ -17,13 +17,8 @@ export const sendSignUpEmail = inngest.createFunction(
         const response = await step.run('generate-welcome-intro', async () => {
             const apiKey = process.env.GEMINI_API_KEY;
 
-            // Diagnostic: Let's see what this key is allowed to do
-            const listRes = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`);
-            const listData = await listRes.json();
-            console.log("Available Models for this key:", listData.models?.map((m: any) => m.name));
-
-            // We will try gemini-1.5-flash-8b - it is the newest, smallest, and most available model
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=${apiKey}`, {
+            // Using the exact model name found in your successful diagnostic log
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -40,8 +35,10 @@ export const sendSignUpEmail = inngest.createFunction(
             return data;
         });
 
+// The extraction logic remains the same
         const part = response.candidates?.[0]?.content?.parts?.[0];
         const introText = (part && 'text' in part ? part.text : null) || 'Welcome to Stockify! We are excited to help you track your financial journey.';
+
         await step.run('send-welcome-email', async () => {
             const part = response.candidates?.[0]?.content?.parts?.[0];
             const introText = (part && 'text' in part ? part.text : null) ||'Thanks for joining Stockify. You now have the tools to track markets and make smarter moves.'
