@@ -14,18 +14,30 @@ export const sendSignUpEmail = inngest.createFunction(
 
         const prompt = PERSONALIZED_WELCOME_EMAIL_PROMPT.replace('{{userProfile}}', userProfile)
 
-        const response = await step.ai.infer('generate-welcome-intro', {
-            model: step.ai.models.gemini({ model: 'gemini-1.5-flash' }),
-            body: {
-                contents: [
-                    {
-                        role: 'user',
-                        parts: [
-                            { text: prompt }
-                        ]
+        const response = await step.run('generate-welcome-intro', async () => {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: prompt }]
                     }]
+                })
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(`Gemini API Error: ${JSON.stringify(errorData)}`);
             }
-        })
+
+            return await res.json();
+        });
+
+// IMPORTANT: Update how the text is extracted below:
+        const part = response.candidates?.[0]?.content?.parts?.[0];
+        const introText = (part && 'text' in part ? part.text : null) || 'Thanks for joining Stockify.';
 
         await step.run('send-welcome-email', async () => {
             const part = response.candidates?.[0]?.content?.parts?.[0];
