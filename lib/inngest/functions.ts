@@ -15,6 +15,7 @@ export const sendSignUpEmail = inngest.createFunction(
         const prompt = PERSONALIZED_WELCOME_EMAIL_PROMPT.replace('{{userProfile}}', userProfile)
 
         const response = await step.run('generate-welcome-intro', async () => {
+            // We use the absolute URL to avoid the 404 routing error
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
                 method: 'POST',
                 headers: {
@@ -29,15 +30,16 @@ export const sendSignUpEmail = inngest.createFunction(
 
             if (!res.ok) {
                 const errorData = await res.json();
+                // This will show the exact error in your Vercel logs if it fails
                 throw new Error(`Gemini API Error: ${JSON.stringify(errorData)}`);
             }
 
             return await res.json();
         });
 
-// IMPORTANT: Update how the text is extracted below:
+// IMPORTANT: Update the extraction logic below the response
         const part = response.candidates?.[0]?.content?.parts?.[0];
-        const introText = (part && 'text' in part ? part.text : null) || 'Thanks for joining Stockify.';
+        const introText = (part && 'text' in part ? part.text : null) || 'Thanks for joining Stockify. You now have the tools to track markets and make smarter moves.';
 
         await step.run('send-welcome-email', async () => {
             const part = response.candidates?.[0]?.content?.parts?.[0];
