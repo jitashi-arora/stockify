@@ -42,7 +42,7 @@ const SignIn = () => {
                 <InputField
                     name="email"
                     label="Email"
-                    placeholder="contact@jsmastery.com"
+                    placeholder="Enter Email"
                     register={register}
                     error={errors.email}
                     validation={{

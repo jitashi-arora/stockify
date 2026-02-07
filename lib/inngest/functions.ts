@@ -15,7 +15,7 @@ export const sendSignUpEmail = inngest.createFunction(
         const prompt = PERSONALIZED_WELCOME_EMAIL_PROMPT.replace('{{userProfile}}', userProfile)
 
         const response = await step.ai.infer('generate-welcome-intro', {
-            model: step.ai.models.gemini({ model: 'gemini-2.5-flash-lite' }),
+            model: step.ai.models.gemini({ model: 'gemini-1.5-flash' }),
             body: {
                 contents: [
                     {
